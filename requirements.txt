@@ -1,0 +1,6 @@
+torch>=2.2
+transformers>=4.48.0
+peft>=0.14.0
+accelerate>=1.2.0
+qwen-vl-utils>=0.0.8
+wandb>=0.18.0
