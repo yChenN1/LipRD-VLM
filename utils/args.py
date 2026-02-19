@@ -28,11 +28,23 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional annotation file (json/jsonl/csv/tsv). If set, it overrides --val_root.",
     )
-    parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument(
+        "--train_file_list",
+        type=str,
+        default="",
+        help="Optional text file list for training. Each line is a sample path stem or mp4 path.",
+    )
+    parser.add_argument(
+        "--val_file_list",
+        type=str,
+        default="",
+        help="Optional text file list for validation. Each line is a sample path stem or mp4 path.",
+    )
+    parser.add_argument("--output_dir", type=str, default='/mnt/fast/nobackup/scratch4weeks/yc01815/LipRD-VLM/qwen3vl-liprd-lora_v1')
     parser.add_argument("--default_instruction", type=str, default="Please read the speaker's lips and transcribe the speech.")
 
     parser.add_argument("--num_train_epochs", type=int, default=3)
-    parser.add_argument("--per_device_train_batch_size", type=int, default=1)
+    parser.add_argument("--per_device_train_batch_size", type=int, default=2)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=8)
     parser.add_argument("--learning_rate", type=float, default=2e-4)
     parser.add_argument("--weight_decay", type=float, default=0.0)

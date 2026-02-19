@@ -45,22 +45,31 @@ class LipReadingDataset(Dataset):
         self,
         ann_path: str = "",
         data_root: str = "",
+        file_list: str = "",
         default_instruction: str = "Please read the speaker's lips and transcribe the speech.",
     ) -> None:
         self.ann_path = Path(ann_path) if ann_path else None
         self.data_root = Path(data_root) if data_root else None
+        self.file_list = Path(file_list) if file_list else None
         self.default_instruction = default_instruction
         self.samples = self._build_samples()
         if not self.samples:
-            source = str(self.data_root) if self.data_root is not None else str(self.ann_path)
+            if self.ann_path is not None:
+                source = str(self.ann_path)
+            elif self.file_list is not None:
+                source = str(self.file_list)
+            else:
+                source = str(self.data_root)
             raise ValueError(f"No valid sample found in: {source}")
 
     def _build_samples(self) -> List[Dict[str, Any]]:
-        if self.data_root is not None:
-            return self._load_from_root(self.data_root)
         if self.ann_path is not None:
             return self._load_samples(self.ann_path)
-        raise ValueError("Either ann_path or data_root must be provided.")
+        if self.file_list is not None:
+            return self._load_from_file_list(self.file_list, self.data_root)
+        if self.data_root is not None:
+            return self._load_from_root(self.data_root)
+        raise ValueError("One of ann_path, file_list or data_root must be provided.")
 
     @staticmethod
     def _load_samples(path: Path) -> List[Dict[str, Any]]:
@@ -94,6 +103,51 @@ class LipReadingDataset(Dataset):
                     "text": text,
                 }
             )
+        return samples
+
+    @staticmethod
+    def _load_from_file_list(file_list: Path, data_root: Path | None) -> List[Dict[str, Any]]:
+        if not file_list.exists():
+            raise FileNotFoundError(f"File list not found: {file_list}")
+
+        candidate_bases: List[Path] = [file_list.parent]
+        if data_root is not None:
+            candidate_bases.insert(0, data_root)
+
+        samples: List[Dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+        for raw_line in file_list.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            rel_path = Path(line).expanduser()
+            found_pair = None
+            for base in candidate_bases:
+                base_path = (base / rel_path).resolve()
+                if base_path.suffix:
+                    mp4_path = base_path
+                    txt_path = base_path.with_suffix(".txt")
+                else:
+                    mp4_path = base_path.with_suffix(".mp4")
+                    txt_path = base_path.with_suffix(".txt")
+                if mp4_path.exists() and txt_path.exists():
+                    found_pair = (mp4_path, txt_path)
+                    break
+
+            if found_pair is None:
+                continue
+
+            mp4_path, txt_path = found_pair
+            text = txt_path.read_text(encoding="utf-8", errors="ignore").strip()
+            if not text:
+                continue
+
+            key = (str(mp4_path), text)
+            if key in seen:
+                continue
+            seen.add(key)
+            samples.append({"video_path": str(mp4_path), "text": text})
         return samples
 
     def __len__(self) -> int:

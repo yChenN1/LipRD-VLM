@@ -19,11 +19,13 @@ def main() -> None:
     train_dataset = LipReadingDataset(
         ann_path=args.train_data,
         data_root="" if args.train_data else args.train_root,
+        file_list="" if args.train_data else args.train_file_list,
         default_instruction=args.default_instruction,
     )
     val_dataset = LipReadingDataset(
         ann_path=args.val_data,
         data_root="" if args.val_data else args.val_root,
+        file_list="" if args.val_data else args.val_file_list,
         default_instruction=args.default_instruction,
     )
     model, processor = build_model_and_processor(args)
@@ -53,7 +55,7 @@ def main() -> None:
         fp16=args.fp16,
         report_to=args.report_to,
         run_name=args.run_name,
-        dataloader_num_workers=2,
+        dataloader_num_workers=8,
     )
 
     trainer = Trainer(
