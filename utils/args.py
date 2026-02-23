@@ -7,13 +7,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--train_root",
         type=str,
-        default="/mnt/fast/nobackup/scratch4weeks/yc01815/Voicecraft_dub/samples/trainval",
+        default="/scratch/u5ge/yuncy.u5ge/LipRD/dataset/test",
         help="Train root folder. Recursively scans *.mp4 and matches same-name *.txt.",
     )
     parser.add_argument(
         "--val_root",
         type=str,
-        default="/mnt/fast/nobackup/scratch4weeks/yc01815/Voicecraft_dub/samples/test",
+        default="/scratch/u5ge/yuncy.u5ge/LipRD/dataset/test",
         help="Validation root folder. Recursively scans *.mp4 and matches same-name *.txt.",
     )
     parser.add_argument(
@@ -40,11 +40,11 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional text file list for validation. Each line is a sample path stem or mp4 path.",
     )
-    parser.add_argument("--output_dir", type=str, default='/mnt/fast/nobackup/scratch4weeks/yc01815/LipRD-VLM/qwen3vl-liprd-lora_v1')
+    parser.add_argument("--output_dir", type=str, default='/scratch/u5ge/yuncy.u5ge/LipRD/qwen3vl-liprd-lora_v1')
     parser.add_argument("--default_instruction", type=str, default="Please read the speaker's lips and transcribe the speech.")
 
     parser.add_argument("--num_train_epochs", type=int, default=3)
-    parser.add_argument("--per_device_train_batch_size", type=int, default=2)
+    parser.add_argument("--per_device_train_batch_size", type=int, default=1)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=8)
     parser.add_argument("--learning_rate", type=float, default=2e-4)
     parser.add_argument("--weight_decay", type=float, default=0.0)
@@ -55,7 +55,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval_steps", type=int, default=500)
     parser.add_argument("--save_total_limit", type=int, default=3)
 
-    parser.add_argument("--max_length", type=int, default=2048)
+    parser.add_argument("--max_length", type=int, default=8192)
     parser.add_argument("--fps", type=float, default=1.0)
     parser.add_argument("--max_frames", type=int, default=32)
 
@@ -68,10 +68,37 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         default=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     )
+    parser.add_argument(
+        "--lora_vision_qkvo",
+        action="store_true",
+        help="Also apply LoRA to q/k/v/o attention projection layers inside vision encoder.",
+    )
 
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--unpaired_text_for_train",
+        action="store_true",
+        help="Ablation mode: intentionally mismatch text labels for train samples.",
+    )
+    parser.add_argument(
+        "--unpaired_text_for_val",
+        action="store_true",
+        help="Ablation mode: intentionally mismatch text labels for val samples.",
+    )
+    parser.add_argument(
+        "--unpaired_shuffle_seed",
+        type=int,
+        default=42,
+        help="Random seed used to shuffle text labels in unpaired ablation mode.",
+    )
     parser.add_argument("--bf16", action="store_true")
     parser.add_argument("--fp16", action="store_true")
+    parser.add_argument(
+        "--deepspeed",
+        type=str,
+        default="",
+        help="Path to DeepSpeed config json. Empty means disabled.",
+    )
     parser.add_argument("--gradient_checkpointing", action="store_true")
     parser.add_argument("--report_to", type=str, default="wandb", help="none|tensorboard|wandb")
     parser.add_argument("--run_name", type=str, default="qwen3vl-liprd-lora")

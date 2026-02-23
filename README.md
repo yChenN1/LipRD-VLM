@@ -63,6 +63,18 @@ python train.py \
   --gradient_checkpointing
 ```
 
+Enable DeepSpeed (ZeRO-2):
+
+```bash
+torchrun --nproc_per_node=4 train.py \
+  --model_name_or_path /path/to/Qwen3-VL \
+  --output_dir /path/to/ckpt_qwen3vl_lora \
+  --per_device_train_batch_size 1 \
+  --gradient_accumulation_steps 8 \
+  --bf16 \
+  --deepspeed configs/deepspeed_zero2.json
+```
+
 Enable W&B logging:
 
 ```bash
@@ -81,3 +93,4 @@ python train.py \
 - It evaluates on `test` split during training (default `--eval_steps 500`).
 - If your environment does not support `bf16`, switch to `--fp16` or disable both.
 - If your model has different LoRA target module names, set `--lora_target_modules`.
+- DeepSpeed is optional. Keep `--deepspeed` empty to run regular Trainer/DDP.

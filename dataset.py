@@ -1,5 +1,6 @@
 import csv
 import json
+import random
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -47,12 +48,18 @@ class LipReadingDataset(Dataset):
         data_root: str = "",
         file_list: str = "",
         default_instruction: str = "Please read the speaker's lips and transcribe the speech.",
+        unpaired_text: bool = False,
+        unpaired_shuffle_seed: int = 42,
     ) -> None:
         self.ann_path = Path(ann_path) if ann_path else None
         self.data_root = Path(data_root) if data_root else None
         self.file_list = Path(file_list) if file_list else None
         self.default_instruction = default_instruction
+        self.unpaired_text = unpaired_text
+        self.unpaired_shuffle_seed = unpaired_shuffle_seed
         self.samples = self._build_samples()
+        if self.unpaired_text:
+            self.samples = self._make_unpaired_samples(self.samples, self.unpaired_shuffle_seed)
         if not self.samples:
             if self.ann_path is not None:
                 source = str(self.ann_path)
@@ -149,6 +156,28 @@ class LipReadingDataset(Dataset):
             seen.add(key)
             samples.append({"video_path": str(mp4_path), "text": text})
         return samples
+
+    @staticmethod
+    def _make_unpaired_samples(samples: List[Dict[str, Any]], seed: int) -> List[Dict[str, Any]]:
+        if len(samples) <= 1:
+            return samples
+
+        texts = [str(sample.get("label", sample.get("text", ""))) for sample in samples]
+        shuffled_texts = texts.copy()
+        rng = random.Random(seed)
+        rng.shuffle(shuffled_texts)
+
+        if shuffled_texts == texts:
+            shift = rng.randint(1, len(shuffled_texts) - 1)
+            shuffled_texts = shuffled_texts[shift:] + shuffled_texts[:shift]
+
+        remapped: List[Dict[str, Any]] = []
+        for idx, sample in enumerate(samples):
+            remapped_sample = dict(sample)
+            remapped_sample["text"] = shuffled_texts[idx]
+            remapped_sample.pop("label", None)
+            remapped.append(remapped_sample)
+        return remapped
 
     def __len__(self) -> int:
         return len(self.samples)

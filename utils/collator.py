@@ -45,6 +45,8 @@ class LipReadingDataCollator:
         full_texts: List[str] = []
         prompt_texts: List[str] = []
         videos = []
+        video_metadatas = []
+        video_kwargs = {}
 
         for messages in messages_list:
             full_texts.append(
@@ -55,17 +57,33 @@ class LipReadingDataCollator:
                 self.processor.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
             )
 
-            _, video_inputs = process_vision_info(messages)
-            if len(video_inputs) != 1:
+            _, video_inputs, current_video_kwargs = process_vision_info(
+                [messages],
+                return_video_kwargs=True,
+                return_video_metadata=True,
+            )
+            if current_video_kwargs:
+                video_kwargs = current_video_kwargs
+
+            if video_inputs is None or len(video_inputs) != 1:
                 raise ValueError("Each sample should contain exactly one video input.")
-            videos.append(video_inputs[0])
+            video_item = video_inputs[0]
+            if isinstance(video_item, tuple) and len(video_item) == 2:
+                video_tensor, video_metadata = video_item
+            else:
+                video_tensor, video_metadata = video_item, None
+            videos.append(video_tensor)
+            video_metadatas.append(video_metadata)
+
 
         model_inputs = self.processor(
             text=full_texts,
             videos=videos,
+            video_metadata=video_metadatas,
+            **video_kwargs,
             padding=True,
             truncation=True,
-            max_length=self.max_length,
+            # max_length=self.max_length,
             return_tensors="pt",
         )
 
@@ -74,13 +92,17 @@ class LipReadingDataCollator:
         if pad_token_id is not None:
             labels[labels == pad_token_id] = -100
 
-        for i, (prompt_text, video_input) in enumerate(zip(prompt_texts, videos)):
+        for i, (prompt_text, video_input, video_metadata) in enumerate(
+            zip(prompt_texts, videos, video_metadatas)
+        ):
             prompt_inputs = self.processor(
                 text=[prompt_text],
                 videos=[video_input],
+                video_metadata=[video_metadata],
+                **video_kwargs,
                 padding=False,
                 truncation=True,
-                max_length=self.max_length,
+                # max_length=self.max_length,
                 return_tensors="pt",
             )
             prompt_len = int(prompt_inputs["input_ids"].shape[1])

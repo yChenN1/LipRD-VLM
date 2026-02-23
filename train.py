@@ -21,12 +21,16 @@ def main() -> None:
         data_root="" if args.train_data else args.train_root,
         file_list="" if args.train_data else args.train_file_list,
         default_instruction=args.default_instruction,
+        unpaired_text=args.unpaired_text_for_train,
+        unpaired_shuffle_seed=args.unpaired_shuffle_seed,
     )
     val_dataset = LipReadingDataset(
         ann_path=args.val_data,
         data_root="" if args.val_data else args.val_root,
         file_list="" if args.val_data else args.val_file_list,
         default_instruction=args.default_instruction,
+        unpaired_text=args.unpaired_text_for_val,
+        unpaired_shuffle_seed=args.unpaired_shuffle_seed + 1,
     )
     model, processor = build_model_and_processor(args)
     collator = LipReadingDataCollator(
@@ -55,7 +59,9 @@ def main() -> None:
         fp16=args.fp16,
         report_to=args.report_to,
         run_name=args.run_name,
-        dataloader_num_workers=8,
+        dataloader_num_workers=0,
+        gradient_checkpointing=args.gradient_checkpointing,
+        deepspeed=args.deepspeed or None,
     )
 
     trainer = Trainer(
